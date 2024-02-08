@@ -22,9 +22,10 @@ with open('prime','r') as f:
 	p = int(f.read())
 points = []
 l = 0
+path = 'output/'
 for i in range(1,6):
 	try:
-		with open('key' + str(i),'r') as f:
+		with open(path + 'key' + str(i),'r') as f:
 			X = f.read().split('-')
 			points.append([base_decode(x) for x in X])
 			l += 1
@@ -49,7 +50,7 @@ if l >= 3:
 		s = base_encode(s)
 		print('Interpolation successful')
 		print('Saving output to file \'secret\'')
-		with open('secret','w') as f:
+		with open(path + 'secret','w') as f:
 			f.write(s)
 		print('Success!')
 	except:

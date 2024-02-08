@@ -80,11 +80,12 @@ def main():
 		# generate secret and keys
 		secret, keys = gen(5,3,p)
 		# write keys to files
+		path = 'output/'
 		for i in range(1,6):
-			with open('key' + str(i),'w') as file:
+			with open(path + 'key' + str(i),'w') as file:
 				file.write(keys[i-1])
 		# write secret to file
-		with open('secret_gen','w') as file:
+		with open(path + 'secret_gen','w') as file:
 				file.write(secret)
 		print('Success!')
 	except (FileNotFoundError, ValueError) as e:
