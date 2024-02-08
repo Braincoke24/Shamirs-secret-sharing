@@ -8,6 +8,14 @@ BASE_DICT = dict((c, v) for v, c in enumerate(BASE_ALPH))
 BASE_LEN = len(BASE_ALPH)
 
 def base_decode(string):
+	"""Converts an alphanumeric string to an integer using base 62 decoding.
+
+	Args:
+		string (str): The alphanumeric string to be decoded.
+
+	Returns:
+		int: The integer representation of the alphanumeric string.
+	"""
 	num = 0
 	for char in string:
 		num = num * BASE_LEN + BASE_DICT[char]
@@ -56,7 +64,7 @@ def load_prime(filename, min_bit_length=256):
 		int: The loaded prime number.
 	"""
 	try:
-		with open(filename,'r') as file:
+		with open(filename, 'r') as file:
 			prime = int(file.read())
 			if prime.bit_length() < min_bit_length:
 				raise PrimeTooSmallError(f'{prime} is too small. You have to provide a prime number with a bit length of at least {min_bit_length}.')
@@ -64,19 +72,15 @@ def load_prime(filename, min_bit_length=256):
 				raise NonPrimeError(f'{prime} is not prime.')
 			return prime
 	except FileNotFoundError:
-		print('Error: File "{}" not found.\n'.format(filename))
-		exit(1)
+		raise FileNotFoundError(f'File "{filename}" not found.')
 	except ValueError:
-		print('Error: Invalid number in file "{}".\n'.format(filename))
-		exit(1)
+		raise ValueError(f'Invalid number in file "{filename}".')
 	except NonPrimeError:
-		print('Error: Number in file "{}" is not a prime number.\n'.format(filename))
-		exit(1)
+		raise NonPrimeError(f'Number in file "{filename}" is not a prime number.')
 	except PrimeTooSmallError:
-		print('Error: Number in file "{}" is too small. You have to provide a prime number with a bit length of at least {}.\n'.format(filename,min_bit_length))
-		exit(1)
+		raise PrimeTooSmallError(f'Number in file "{filename}" is too small. You have to provide a prime number with a bit length of at least {min_bit_length}.')
 
-def gen(n,k,p):
+def gen(n, k, p):
 	"""Generates a secret and corresponding keys for Shamir's Secret Sharing scheme.
 
 	Args:
@@ -94,18 +98,18 @@ def gen(n,k,p):
 		raise ValueError(f'Threshold ({k}) exceeds number of generated keys ({n}).')
 
 	secret = secrets.randbelow(p)
-	coeff = [secrets.randbelow(p) for i in range(k-1)]
+	coeff = [secrets.randbelow(p) for _ in range(k-1)]
 
 	def f(x):
 		res = secret
 		for i in range(k-1):
-			res += coeff[i]*pow(x,i+1,p) % p
+			res += coeff[i] * pow(x, i+1, p) % p
 			res %= p
 		return res
 	
-	X = [secrets.randbelow(p-1) + 1 for i in range(n)]
-	if len(list(set(X))) != n:
-		return gen(n,k,p)
+	X = [secrets.randbelow(p-1) + 1 for _ in range(n)]
+	if len(set(X)) != n:
+		return gen(n, k, p)
 	
 	Y = [f(x) for x in X]
 	
@@ -116,58 +120,75 @@ def gen(n,k,p):
 	return secret, keys
 
 class NoKeyError(Exception):
-	""""Custom exception raised when no key is found."""
+	"""Custom exception raised when no key is found."""
 	pass
 
 class NotEnoughKeysError(Exception):
-	""""Custom exception raised when the number of keys is below the threshold."""
+	"""Custom exception raised when the number of keys is below the threshold."""
 	pass
 
 def read_key_files(path):
+	"""Reads the key files from the specified directory and returns the points.
+
+	Args:
+		path (str): The path to the directory containing key files.
+
+	Raises:
+		NoKeyError: If no key files are found in the directory.
+		NotEnoughKeysError: If the number of keys is below the threshold.
+
+	Returns:
+		list: A list containing the points (pairs of x, y values) extracted from the key files.
+	"""
 	try:
 		points = []
 		l = 0
-		# Determine n by finding the maximum number of key files present in the directory
-		n = 0
+		n, k = 0, 0  # Initialize n and k
 		for filename in os.listdir(path):
 			if filename.startswith('key') and filename[3:].isdigit():
-				with open(path + filename,'r') as file:
+				with open(os.path.join(path, filename), 'r') as file:
 					X = file.read().split('-')
 					if len(X) != 4:
-						raise ValueError(f'Invalid key in {path + filename}')
+						raise ValueError(f'Invalid key in {filename}')
 					try:
-						n, k = int(X[0]), int(X[1])
-					except:
-						raise ValueError(f'Invalid key in {path + filename}')
+						n, k = map(int, X[:2])  # Read n and k from the key file
+					except ValueError:
+						raise ValueError(f'Invalid key in {filename}')
 
 		if n == 0:
 			raise NoKeyError(f'No key file found in "{path}".')
 
-		for i in range(1,n+1):
+		for i in range(1, n + 1):
 			try:
-				with open(path + 'key' + str(i),'r') as file:
+				with open(os.path.join(path, f'key{i}'), 'r') as file:
 					X = file.read().split('-')
 					if len(X) != 4:
-						raise ValueError(f'Invalid key in {path + filename}')
+						raise ValueError(f'Invalid key in key{i}')
 					X = X[2:]
 					points.append([base_decode(x) for x in X])
 					l += 1
-					print('key ' + str(i) + ' found')
-			except:
-				print('key ' + str(i) + ' not found')
-		print(str(l) + '/' + str(k) + ' keys found')
+					print(f'Key {i} found')
+			except FileNotFoundError:
+				print(f'Key {i} not found')
+
+		print(f'{l}/{k} keys found')
 		if l >= k:
 			return points
 		else:
-			raise NotEnoughKeysError(f'Insufficient keys. Please provide at least ' + str(k-l) + ' more keys.')
+			raise NotEnoughKeysError(f'Insufficient keys. Please provide at least {k-l} more keys.')
 	except NoKeyError:
-		print('Error: No key files found in "{}".\n'.format(path))
-		exit(1)
-	except NotEnoughKeysError as e:
-		print('Error: {}\n'.format(e))
-		exit(1)
+		raise NoKeyError(f'No key files found in "{path}".')
 
-def lagrange_interpolation(points,p):
+def lagrange_interpolation(points, p):
+	"""Performs Lagrange interpolation to retrieve the secret from the provided points.
+
+	Args:
+		points (list): A list containing the points (pairs of x, y values) used for interpolation.
+		p (int): The prime number used for finite field operations.
+
+	Returns:
+		str: The secret retrieved using Lagrange interpolation.
+	"""
 	l = len(points)
 	X = [points[i][0] for i in range(l)]
 	Y = [points[i][1] for i in range(l)]
@@ -175,9 +196,10 @@ def lagrange_interpolation(points,p):
 	for i in range(l):
 		prod = Y[i]
 		for j in range(l):
-			if j == i: continue
-			prod = -X[j]*prod % p
-			prod = prod*pow((X[i]-X[j]),-1,p) % p
+			if j == i:
+				continue
+			prod = -X[j] * prod % p
+			prod = prod * pow((X[i] - X[j]), -1, p) % p
 		s += prod
 		s %= p
 	secret = base_encode(s)
@@ -190,20 +212,20 @@ def generate_secret_and_keys():
 		p = load_prime('prime')
 		n = 5 # Number of shares
 		k = 3 # Threshold number of shares required to reconstruct the secret
-		secret, keys = gen(n,k,p)
+		secret, keys = gen(n, k, p)
 
 		path = 'output/'
-		for i in range(1,6):
-			with open(path + 'key' + str(i),'w') as file:
-				file.write(keys[i-1])
+		for i, key in enumerate(keys, start=1):
+			with open(os.path.join(path, f'key{i}'), 'w') as file:
+				file.write(key)
 		
-		with open(path + 'secret_gen','w') as file:
-				file.write(secret)
+		with open(os.path.join(path, 'secret_gen'), 'w') as file:
+			file.write(secret)
 		
 		print('Success!')
 
 	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError) as e:
-		print("Error: {}\n".format(e))
+		print(f"Error: {e}\n")
 		exit(1)
 
 def retrieve_secret():
@@ -212,15 +234,15 @@ def retrieve_secret():
 		p = load_prime('prime')
 		path = 'output/'
 		points = read_key_files(path)
-		print('Beginning lagrange interpolation...')
-		secret = lagrange_interpolation(points,p)
+		print('Beginning Lagrange interpolation...')
+		secret = lagrange_interpolation(points, p)
 		print('Interpolation successful')
-		print('Saving secret to file "' + path + 'secret"')
-		with open(path + 'secret','w') as file:
+		print(f'Saving secret to file "{path}secret"')
+		with open(os.path.join(path, 'secret'), 'w') as file:
 			file.write(secret)
 		print('Success!')
-	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError,NoKeyError) as e:
-		print("Error: {}\n".format(e))
+	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError, NoKeyError) as e:
+		print(f"Error: {e}\n")
 		exit(1)
 
 if __name__ == "__main__":
