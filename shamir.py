@@ -1,9 +1,16 @@
+import sys
 import secrets
 from sympy import isprime
 
 BASE_ALPH = tuple('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
 BASE_DICT = dict((c, v) for v, c in enumerate(BASE_ALPH))
 BASE_LEN = len(BASE_ALPH)
+
+def base_decode(string):
+	num = 0
+	for char in string:
+		num = num * BASE_LEN + BASE_DICT[char]
+	return num
 
 def base_encode(num):
 	"""Converts an integer to an alphanumeric string using base 62 encoding.
@@ -106,11 +113,13 @@ def gen(n,k,p):
 
 	return secret, keys
 
-def main():
-	"""Main function for Shamir's Secret Sharing."""
+def generate_secret_and_keys():
+	"""Generates secret and corresponding keys for Shamir's Secret Sharing scheme."""
 	try:
 		p = load_prime('prime')
-		secret, keys = gen(5,3,p)
+		n = 5 # Number of shares
+		k = 3 # Threshold number of shares required to reconstruct the secret
+		secret, keys = gen(n,k,p)
 
 		path = 'output/'
 		for i in range(1,6):
@@ -126,7 +135,60 @@ def main():
 		print("Error: {}\n".format(e))
 		exit(1)
 
+def retrieve_secret():
+	"""Retrieves the secret using the provided keys and performs Lagrange interpolation."""
+	try:
+		p = load_prime('prime')
+		points = []
+		l = 0
+		path = 'output/'
+		for i in range(1,6):
+			try:
+				with open(path + 'key' + str(i),'r') as f:
+					X = f.read().split('-')
+					points.append([base_decode(x) for x in X])
+					l += 1
+					print('key ' + str(i) + ' found')
+			except:
+				print('secret ' + str(i) + ' not found')
+		print(str(l) + '/3 secrets found')
+		if l >= 3:
+			print('Beginning lagrange interpolation...')
+			public = [points[i][0] for i in range(l)]
+			private = [points[i][1] for i in range(l)]
+			try:
+				s = 0
+				for i in range(l):
+					prod = private[i]
+					for j in range(l):
+						if j == i: continue
+						prod = -public[j]*prod % p
+						prod = prod*pow((public[i]-public[j]),-1,p) % p
+					s += prod
+					s %= p
+				s = base_encode(s)
+				print('Interpolation successful')
+				print('Saving output to file \'secret\'')
+				with open(path + 'secret','w') as f:
+					f.write(s)
+				print('Success!')
+			except:
+				print('Some error occured. Maybe you tried to cheat?')
+		else:
+			print('insufficient secrets. Please provide at least ' + str(3-l) + ' more secrets.')
+	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError) as e:
+		print("Error: {}\n".format(e))
+		exit(1)
+
 if __name__ == "__main__":
-	# If this script is executed directly (not imported as a module),
-	# then call the main() function to start the program.
-	main()
+	if len(sys.argv) != 2:
+		print("Usage: python script.py [generate|retrieve]")
+		exit(1)
+
+	option = sys.argv[1]
+	if option == "generate":
+		generate_secret_and_keys()
+	elif option == "retrieve":
+		retrieve_secret()
+	else:
+		print("Invalid option. Use 'generate' or 'retrieve'.")
