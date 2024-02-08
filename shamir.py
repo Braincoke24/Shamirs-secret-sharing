@@ -207,7 +207,14 @@ def lagrange_interpolation(points, p):
 	return secret
 
 def generate_secret_and_keys(n, k, path):
-	"""Generates secret and corresponding keys for Shamir's Secret Sharing scheme."""
+	"""Generates secret and corresponding keys for Shamir's Secret Sharing scheme.
+
+	Args:
+		n (int): The total number of shares to generate.
+		k (int): The threshold number of shares required to reconstruct the secret.
+		path (str): The path to save the generated keys.
+
+	"""
 	try:
 		p = load_prime('prime')
 		secret, keys = gen(n, k, p)
@@ -226,7 +233,12 @@ def generate_secret_and_keys(n, k, path):
 		exit(1)
 
 def retrieve_secret(path):
-	"""Retrieves the secret using the provided keys and performs Lagrange interpolation."""
+	"""Retrieves the secret using the provided keys and performs Lagrange interpolation.
+
+	Args:
+		path (str): The path to read the key files and save the secret.
+
+	"""
 	try:
 		p = load_prime('prime')
 		points = read_key_files(path)
