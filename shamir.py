@@ -72,13 +72,13 @@ def load_prime(filename, min_bit_length=256):
 				raise NonPrimeError(f'{prime} is not prime.')
 			return prime
 	except FileNotFoundError:
-		raise FileNotFoundError(f'File "{filename}" not found.')
+		raise FileNotFoundError(f'File \'{filename}\' not found.')
 	except ValueError:
-		raise ValueError(f'Invalid number in file "{filename}".')
+		raise ValueError(f'Invalid number in file \'{filename}\'.')
 	except NonPrimeError:
-		raise NonPrimeError(f'Number in file "{filename}" is not a prime number.')
+		raise NonPrimeError(f'Number in file \'{filename}\' is not a prime number.')
 	except PrimeTooSmallError:
-		raise PrimeTooSmallError(f'Number in file "{filename}" is too small. You have to provide a prime number with a bit length of at least {min_bit_length}.')
+		raise PrimeTooSmallError(f'Number in file \'{filename}\' is too small. You have to provide a prime number with a bit length of at least {min_bit_length}.')
 
 def gen(n, k, p):
 	"""Generates a secret and corresponding keys for Shamir's Secret Sharing scheme.
@@ -156,7 +156,7 @@ def read_key_files(path):
 						raise ValueError(f'Invalid key in {filename}')
 
 		if n == 0:
-			raise NoKeyError(f'No key file found in "{path}".')
+			raise NoKeyError(f'No key file found in \'{path}\'.')
 
 		for i in range(1, n + 1):
 			try:
@@ -177,7 +177,7 @@ def read_key_files(path):
 		else:
 			raise NotEnoughKeysError(f'Insufficient keys. Please provide at least {k-l} more keys.')
 	except NoKeyError:
-		raise NoKeyError(f'No key files found in "{path}".')
+		raise NoKeyError(f'No key files found in \'{path}\'.')
 
 def lagrange_interpolation(points, p):
 	"""Performs Lagrange interpolation to retrieve the secret from the provided points.
@@ -229,7 +229,7 @@ def generate_secret_and_keys(n, k, path):
 		print('Success!')
 
 	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError) as e:
-		print(f"Error: {e}\n")
+		print(f'Error: {e}\n')
 		exit(1)
 
 def retrieve_secret(path):
@@ -246,24 +246,24 @@ def retrieve_secret(path):
 		secret = lagrange_interpolation(points, p)
 		print('Interpolation successful')
 		path_secret = os.path.join(path, 'secret')
-		print(f'Saving secret to file "{path_secret}"')
+		print(f'Saving secret to file \'{path_secret}\'')
 		with open(os.path.join(path, 'secret'), 'w') as file:
 			file.write(secret)
 		print('Success!')
 	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError, NoKeyError) as e:
-		print(f"Error: {e}\n")
+		print(f'Error: {e}\n')
 		exit(1)
 
-if __name__ == "__main__":
-	usage_message = "Usage: python shamir.py [generate|retrieve] [path]"
+if __name__ == '__main__':
+	usage_message = 'Usage: python shamir.py [generate|retrieve] [path]'
 	if len(sys.argv) < 2:
 		print(usage_message)
 		exit(1)
 	
 	option = sys.argv[1]
-	if option == "generate":
+	if option == 'generate':
 		if (len(sys.argv) != 4) and (len(sys.argv) != 5):
-			print("Usage: python shamir.py generate <n> <k> [path]")
+			print('Usage: python shamir.py generate <n> <k> [path]')
 			exit(1)
 		n = int(sys.argv[2])
 		k = int(sys.argv[3])
@@ -272,8 +272,8 @@ if __name__ == "__main__":
 	elif (len(sys.argv) != 2) and (len(sys.argv) != 3):
 		print(usage_message)
 		exit(1)
-	elif option == "retrieve":
+	elif option == 'retrieve':
 		path = sys.argv[2] if len(sys.argv) == 3 else 'output'  # Default path is 'output'
 		retrieve_secret(path)
 	else:
-		print("Invalid option. Use 'generate' or 'retrieve'.")
+		print('Invalid option. Use \'generate\' or \'retrieve\'.')
