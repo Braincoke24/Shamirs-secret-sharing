@@ -98,12 +98,12 @@ def gen(n, k, p):
 		raise ValueError(f'Threshold ({k}) exceeds number of generated keys ({n}).')
 
 	secret = secrets.randbelow(p)
-	coeff = [secrets.randbelow(p) for _ in range(k-1)]
+	coefficients = [secrets.randbelow(p) for _ in range(k-1)]
 
 	def f(x):
 		res = secret
 		for i in range(k-1):
-			res += coeff[i] * pow(x, i+1, p) % p
+			res += coefficients[i] * pow(x, i+1, p) % p
 			res %= p
 		return res
 	
