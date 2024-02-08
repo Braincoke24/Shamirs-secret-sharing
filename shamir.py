@@ -268,7 +268,7 @@ def clean_output_folder(path):
 				os.remove(file_path)
 				print(f'Deleted file: {file_path}')
 
-		print(f'Output folder '{path}' cleaned successfully.')
+		print(f'Output folder \'{path}\' cleaned successfully.')
 	except Exception as e:
 		print(f'Error occurred while cleaning output folder: {e}')
 
