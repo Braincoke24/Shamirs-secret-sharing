@@ -1,4 +1,5 @@
 import sys
+import os
 import secrets
 from sympy import isprime
 
@@ -109,7 +110,8 @@ def gen(n,k,p):
 	Y = [f(x) for x in X]
 	
 	secret = base_encode(secret)
-	keys = [base_encode(X[i]) + '-' + base_encode(Y[i]) for i in range(n)]
+	sep = '-'
+	keys = [sep.join([str(n), str(k), base_encode(X[i]), base_encode(Y[i])]) for i in range(n)]
 
 	return secret, keys
 
@@ -142,17 +144,29 @@ def retrieve_secret():
 		points = []
 		l = 0
 		path = 'output/'
-		for i in range(1,6):
+		# Determine n by finding the maximum number of key files present in the directory
+		n = 0
+		for filename in os.listdir(path):
+			if filename.startswith('key') and filename[3:].isdigit():
+				with open(path + filename,'r') as file:
+					X = file.read().split('-')
+					n, k = int(X[0]), int(X[1])
+
+		if n == 0:
+			print('No key files found.')
+			exit(1)
+
+		for i in range(1,n+1):
 			try:
-				with open(path + 'key' + str(i),'r') as f:
-					X = f.read().split('-')
+				with open(path + 'key' + str(i),'r') as file:
+					X = file.read().split('-')[2:]
 					points.append([base_decode(x) for x in X])
 					l += 1
 					print('key ' + str(i) + ' found')
 			except:
 				print('secret ' + str(i) + ' not found')
-		print(str(l) + '/3 secrets found')
-		if l >= 3:
+		print(str(l) + '/' + str(k) + ' secrets found')
+		if l >= k:
 			print('Beginning lagrange interpolation...')
 			public = [points[i][0] for i in range(l)]
 			private = [points[i][1] for i in range(l)]
@@ -169,13 +183,13 @@ def retrieve_secret():
 				s = base_encode(s)
 				print('Interpolation successful')
 				print('Saving output to file \'secret\'')
-				with open(path + 'secret','w') as f:
-					f.write(s)
+				with open(path + 'secret','w') as file:
+					file.write(s)
 				print('Success!')
 			except:
 				print('Some error occured. Maybe you tried to cheat?')
 		else:
-			print('insufficient secrets. Please provide at least ' + str(3-l) + ' more secrets.')
+			print('insufficient secrets. Please provide at least ' + str(k-l) + ' more secrets.')
 	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError) as e:
 		print("Error: {}\n".format(e))
 		exit(1)
