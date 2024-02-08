@@ -175,7 +175,7 @@ def read_key_files(path):
 		if l >= k:
 			return points
 		else:
-			raise NotEnoughKeysError(f'Insufficient keys. Please provide at least {k-l} more keys.')
+			raise NotEnoughKeysError(f'Insufficient keys. At least {k} out of {n} total keys are needed. You provided {l} keys. Please provide at least {k-l} more keys.')
 	except NoKeyError:
 		raise NoKeyError(f'No key files found in \'{path}\'.')
 
@@ -226,7 +226,7 @@ def generate_secret_and_keys(n, k, path):
 		with open(os.path.join(path, 'secret_gen'), 'w') as file:
 			file.write(secret)
 		
-		print('Success!')
+		print(f'Successfully generated secret and keys and saved them in folder \'{path}\'!')
 
 	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError) as e:
 		print(f'Error: {e}\n')
@@ -249,10 +249,28 @@ def retrieve_secret(path):
 		print(f'Saving secret to file \'{path_secret}\'')
 		with open(os.path.join(path, 'secret'), 'w') as file:
 			file.write(secret)
-		print('Success!')
-	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError, NoKeyError) as e:
+		print(f'Successfully retrieved secret and saved it in folder \'{path}\'!')
+	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError, NoKeyError, NotEnoughKeysError) as e:
 		print(f'Error: {e}\n')
 		exit(1)
+
+def clean_output_folder(path):
+	"""Cleans the output folder by deleting all files inside it.
+
+	Args:
+		path (str): The path to the folder to be cleaned.
+	"""
+	try:
+		# Iterate over all files in the folder and delete them
+		for filename in os.listdir(path):
+			file_path = os.path.join(path, filename)
+			if os.path.isfile(file_path):
+				os.remove(file_path)
+				print(f"Deleted file: {file_path}")
+
+		print(f"Output folder '{path}' cleaned successfully.")
+	except Exception as e:
+		print(f"Error occurred while cleaning output folder: {e}")
 
 if __name__ == '__main__':
 	usage_message = 'Usage: python shamir.py [generate|retrieve] [path]'
@@ -261,6 +279,8 @@ if __name__ == '__main__':
 		exit(1)
 	
 	option = sys.argv[1]
+	path = sys.argv[2] if len(sys.argv) == 3 else 'output'  # Default path is 'output'
+
 	if option == 'generate':
 		if (len(sys.argv) != 4) and (len(sys.argv) != 5):
 			print('Usage: python shamir.py generate <n> <k> [path]')
@@ -268,12 +288,14 @@ if __name__ == '__main__':
 		n = int(sys.argv[2])
 		k = int(sys.argv[3])
 		path = sys.argv[4] if len(sys.argv) == 5 else 'output'  # Default path is 'output'
+		clean_output_folder(path)
 		generate_secret_and_keys(n, k, path)
 	elif (len(sys.argv) != 2) and (len(sys.argv) != 3):
 		print(usage_message)
 		exit(1)
 	elif option == 'retrieve':
-		path = sys.argv[2] if len(sys.argv) == 3 else 'output'  # Default path is 'output'
 		retrieve_secret(path)
+	elif option == 'clean':
+		clean_output_folder(path)
 	else:
 		print('Invalid option. Use \'generate\' or \'retrieve\'.')
