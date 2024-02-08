@@ -206,13 +206,12 @@ def lagrange_interpolation(points, p):
 	
 	return secret
 
-def generate_secret_and_keys(n, k):
+def generate_secret_and_keys(n, k, path):
 	"""Generates secret and corresponding keys for Shamir's Secret Sharing scheme."""
 	try:
 		p = load_prime('prime')
 		secret, keys = gen(n, k, p)
 
-		path = 'output/'
 		for i, key in enumerate(keys, start=1):
 			with open(os.path.join(path, f'key{i}'), 'w') as file:
 				file.write(key)
@@ -226,16 +225,16 @@ def generate_secret_and_keys(n, k):
 		print(f"Error: {e}\n")
 		exit(1)
 
-def retrieve_secret():
+def retrieve_secret(path):
 	"""Retrieves the secret using the provided keys and performs Lagrange interpolation."""
 	try:
 		p = load_prime('prime')
-		path = 'output/'
 		points = read_key_files(path)
 		print('Beginning Lagrange interpolation...')
 		secret = lagrange_interpolation(points, p)
 		print('Interpolation successful')
-		print(f'Saving secret to file "{path}secret"')
+		path_secret = os.path.join(path, 'secret')
+		print(f'Saving secret to file "{path_secret}"')
 		with open(os.path.join(path, 'secret'), 'w') as file:
 			file.write(secret)
 		print('Success!')
@@ -244,22 +243,25 @@ def retrieve_secret():
 		exit(1)
 
 if __name__ == "__main__":
-	if len(sys.argv) == 1:
-		print("Usage: python script.py [generate|retrieve]")
+	usage_message = "Usage: python shamir.py [generate|retrieve] [path]"
+	if len(sys.argv) < 2:
+		print(usage_message)
 		exit(1)
 	
 	option = sys.argv[1]
 	if option == "generate":
-		if len(sys.argv) != 4:
-			print("Usage: python script.py generate <n> <k>")
+		if (len(sys.argv) != 4) and (len(sys.argv) != 5):
+			print("Usage: python shamir.py generate <n> <k> [path]")
 			exit(1)
 		n = int(sys.argv[2])
 		k = int(sys.argv[3])
-		generate_secret_and_keys(n, k)
-	elif len(sys.argv) != 2:
-		print("Usage: python script.py [generate|retrieve]")
+		path = sys.argv[4] if len(sys.argv) == 5 else 'output'  # Default path is 'output'
+		generate_secret_and_keys(n, k, path)
+	elif (len(sys.argv) != 2) and (len(sys.argv) != 3):
+		print(usage_message)
 		exit(1)
 	elif option == "retrieve":
-		retrieve_secret()
+		path = sys.argv[2] if len(sys.argv) == 3 else 'output'  # Default path is 'output'
+		retrieve_secret(path)
 	else:
 		print("Invalid option. Use 'generate' or 'retrieve'.")
