@@ -115,6 +115,75 @@ def gen(n,k,p):
 
 	return secret, keys
 
+class NoKeyError(Exception):
+	""""Custom exception raised when no key is found."""
+	pass
+
+class NotEnoughKeysError(Exception):
+	""""Custom exception raised when the number of keys is below the threshold."""
+	pass
+
+def read_key_files(path):
+	try:
+		points = []
+		l = 0
+		# Determine n by finding the maximum number of key files present in the directory
+		n = 0
+		for filename in os.listdir(path):
+			if filename.startswith('key') and filename[3:].isdigit():
+				with open(path + filename,'r') as file:
+					X = file.read().split('-')
+					if len(X) != 4:
+						raise ValueError(f'Invalid key in {path + filename}')
+					try:
+						n, k = int(X[0]), int(X[1])
+					except:
+						raise ValueError(f'Invalid key in {path + filename}')
+
+		if n == 0:
+			raise NoKeyError(f'No key file found in "{path}".')
+
+		for i in range(1,n+1):
+			try:
+				with open(path + 'key' + str(i),'r') as file:
+					X = file.read().split('-')
+					if len(X) != 4:
+						raise ValueError(f'Invalid key in {path + filename}')
+					X = X[2:]
+					points.append([base_decode(x) for x in X])
+					l += 1
+					print('key ' + str(i) + ' found')
+			except:
+				print('key ' + str(i) + ' not found')
+		print(str(l) + '/' + str(k) + ' keys found')
+		if l >= k:
+			return points
+		else:
+			raise NotEnoughKeysError(f'Insufficient keys. Please provide at least ' + str(k-l) + ' more keys.')
+	except NoKeyError:
+		print('Error: No key files found in "{}".\n'.format(path))
+		exit(1)
+	except NotEnoughKeysError as e:
+		print('Error: {}\n'.format(e))
+		exit(1)
+
+def lagrange_interpolation(points,p):
+	l = len(points)
+	X = [points[i][0] for i in range(l)]
+	Y = [points[i][1] for i in range(l)]
+	s = 0
+	for i in range(l):
+		prod = Y[i]
+		for j in range(l):
+			if j == i: continue
+			prod = -X[j]*prod % p
+			prod = prod*pow((X[i]-X[j]),-1,p) % p
+		s += prod
+		s %= p
+	secret = base_encode(s)
+	
+	return secret
+
 def generate_secret_and_keys():
 	"""Generates secret and corresponding keys for Shamir's Secret Sharing scheme."""
 	try:
@@ -141,56 +210,16 @@ def retrieve_secret():
 	"""Retrieves the secret using the provided keys and performs Lagrange interpolation."""
 	try:
 		p = load_prime('prime')
-		points = []
-		l = 0
 		path = 'output/'
-		# Determine n by finding the maximum number of key files present in the directory
-		n = 0
-		for filename in os.listdir(path):
-			if filename.startswith('key') and filename[3:].isdigit():
-				with open(path + filename,'r') as file:
-					X = file.read().split('-')
-					n, k = int(X[0]), int(X[1])
-
-		if n == 0:
-			print('No key files found.')
-			exit(1)
-
-		for i in range(1,n+1):
-			try:
-				with open(path + 'key' + str(i),'r') as file:
-					X = file.read().split('-')[2:]
-					points.append([base_decode(x) for x in X])
-					l += 1
-					print('key ' + str(i) + ' found')
-			except:
-				print('secret ' + str(i) + ' not found')
-		print(str(l) + '/' + str(k) + ' secrets found')
-		if l >= k:
-			print('Beginning lagrange interpolation...')
-			public = [points[i][0] for i in range(l)]
-			private = [points[i][1] for i in range(l)]
-			try:
-				s = 0
-				for i in range(l):
-					prod = private[i]
-					for j in range(l):
-						if j == i: continue
-						prod = -public[j]*prod % p
-						prod = prod*pow((public[i]-public[j]),-1,p) % p
-					s += prod
-					s %= p
-				s = base_encode(s)
-				print('Interpolation successful')
-				print('Saving output to file \'secret\'')
-				with open(path + 'secret','w') as file:
-					file.write(s)
-				print('Success!')
-			except:
-				print('Some error occured. Maybe you tried to cheat?')
-		else:
-			print('insufficient secrets. Please provide at least ' + str(k-l) + ' more secrets.')
-	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError) as e:
+		points = read_key_files(path)
+		print('Beginning lagrange interpolation...')
+		secret = lagrange_interpolation(points,p)
+		print('Interpolation successful')
+		print('Saving secret to file "' + path + 'secret"')
+		with open(path + 'secret','w') as file:
+			file.write(secret)
+		print('Success!')
+	except (FileNotFoundError, ValueError, NonPrimeError, PrimeTooSmallError,NoKeyError) as e:
 		print("Error: {}\n".format(e))
 		exit(1)
 
