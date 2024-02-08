@@ -206,12 +206,10 @@ def lagrange_interpolation(points, p):
 	
 	return secret
 
-def generate_secret_and_keys():
+def generate_secret_and_keys(n, k):
 	"""Generates secret and corresponding keys for Shamir's Secret Sharing scheme."""
 	try:
 		p = load_prime('prime')
-		n = 5 # Number of shares
-		k = 3 # Threshold number of shares required to reconstruct the secret
 		secret, keys = gen(n, k, p)
 
 		path = 'output/'
@@ -246,13 +244,21 @@ def retrieve_secret():
 		exit(1)
 
 if __name__ == "__main__":
-	if len(sys.argv) != 2:
+	if len(sys.argv) == 1:
 		print("Usage: python script.py [generate|retrieve]")
 		exit(1)
-
+	
 	option = sys.argv[1]
 	if option == "generate":
-		generate_secret_and_keys()
+		if len(sys.argv) != 4:
+			print("Usage: python script.py generate <n> <k>")
+			exit(1)
+		n = int(sys.argv[2])
+		k = int(sys.argv[3])
+		generate_secret_and_keys(n, k)
+	elif len(sys.argv) != 2:
+		print("Usage: python script.py [generate|retrieve]")
+		exit(1)
 	elif option == "retrieve":
 		retrieve_secret()
 	else:
